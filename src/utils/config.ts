@@ -5,9 +5,10 @@ import morgan from "morgan"
 function config(express: any) {
     const app = express()
     configDotenv()
+    const allowOrigins = process.env.ALLOWED_ORIGIN?.trim()?.split(",") || "*"
     app.use(
         cors({
-            origin: "*",
+            origin: allowOrigins,
             exposedHeaders: "content-length",
             credentials: true,
             allowedHeaders: [
