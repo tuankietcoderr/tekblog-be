@@ -14,7 +14,7 @@ export default interface IUser {
     name: string
     avatar?: string
     email: string
-    major: string[]
+    major: string
     bio?: string
     activeStatus: ActiveStatus
     isEmailVerified: boolean

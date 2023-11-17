@@ -6,6 +6,7 @@ import postRouter from "./post"
 import tagRouter from "./tag"
 import reportRouter from "./report"
 import adminRouter from "./admin"
+import commentRouter from "./comment"
 
 function getRoutes(app: Express) {
     app.use("/api/auth", authRouter)
@@ -15,6 +16,7 @@ function getRoutes(app: Express) {
     app.use("/api/tag", tagRouter)
     app.use("/api/report", reportRouter)
     app.use("/api/admin", adminRouter)
+    app.use("/api/comment", commentRouter)
 }
 
 export default getRoutes

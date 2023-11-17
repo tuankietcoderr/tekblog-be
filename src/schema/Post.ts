@@ -48,16 +48,18 @@ const PostSchema = new Schema<IPost>(
                 ref: SCHEMA.TAGS
             }
         ],
-        likes: {
-            type: Number,
-            default: 0,
-            min: [0, "Likes must be at least 0"]
-        },
-        saved: {
-            type: Number,
-            default: 0,
-            min: [0, "Saved must be at least 0"]
-        }
+        likes: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: SCHEMA.USERS
+            }
+        ],
+        saved: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: SCHEMA.USERS
+            }
+        ]
     },
     {
         timestamps: true

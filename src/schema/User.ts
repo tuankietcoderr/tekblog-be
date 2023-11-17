@@ -27,23 +27,20 @@ const UserSchema = new Schema<IUser>(
         },
         avatar: {
             type: String,
-            default:
-                "https://secure.gravatar.com/avatar/98d6687c39c37e423d5d80b06ffd65e4?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Fdefault-avatar-0.png"
+            default: "https://i.ibb.co/G5dMxjM/pngwing-com.png"
         },
         name: {
             type: String,
             required: [true, "Name is required"],
             minlength: [3, "Name must be at least 3 characters long"],
-            maxlength: [50, "Name must be at most 50 characters long"]
+            maxlength: [20, "Name must be at most 20 characters long"]
         },
         major: {
-            type: [String],
-            default: []
+            type: String,
+            default: "Unknown"
         },
         bio: {
-            type: String,
-            minlength: [10, "Bio must be at least 10 characters long"],
-            maxlength: [200, "Bio must be at most 200 characters long"]
+            type: String
         },
         activeStatus: {
             type: String,
@@ -82,17 +79,7 @@ const UserSchema = new Schema<IUser>(
     {
         timestamps: true
     }
-).pre("updateOne", function (next) {
-    if (!this.get("email")) {
-        next()
-    }
-    if (!this.get("email").match(/^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-zA-Z0-9]+$/)) {
-        next(new Error("Email is invalid"))
-    } else {
-        next()
-    }
-})
-
+)
 UserSchema.plugin(mongoosePaginate)
 
 export default model<IUser, PaginateModel<IUser>>(SCHEMA.USERS, UserSchema, SCHEMA.USERS)

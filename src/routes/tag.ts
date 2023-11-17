@@ -20,16 +20,6 @@ router.post("/", verifyToken, mustHaveFields<ITag>("title"), async (req, res) =>
     }
 })
 
-// GET HOT TAGS
-router.get("/hot", async (req, res) => {
-    try {
-        const tags = await Tag.find({}).sort({ score: -1 }).limit(10)
-        res.json({ success: true, message: "Hot tags", data: tags })
-    } catch (error: any) {
-        res.status(500).json({ message: error.message })
-    }
-})
-
 // GET ALL
 router.get("/", async (req, res) => {
     try {
@@ -41,6 +31,45 @@ router.get("/", async (req, res) => {
             const { docs, ...rest } = result
             res.json({ success: true, message: "All tags", data: docs, ...rest })
         })
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+})
+
+// GET SOME TAG WITH POSTS
+router.get("/some", async (req, res) => {
+    try {
+        const tags = await Tag.aggregate([
+            {
+                $lookup: {
+                    from: "posts",
+                    localField: "_id",
+                    foreignField: "tags",
+                    as: "posts",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                title: 1,
+                                comments: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            { $unwind: "$posts" },
+            { $sort: { "posts.score": -1 } },
+            {
+                $group: {
+                    _id: "$_id",
+                    title: { $first: "$title" },
+                    score: { $first: "$score" },
+                    posts: { $push: "$posts" }
+                }
+            },
+            { $project: { _id: 1, title: 1, score: 1, posts: { $slice: ["$posts", 0, 3] } } }
+        ])
+        res.json({ success: true, message: "Some tags", data: tags })
     } catch (error: any) {
         res.status(500).json({ message: error.message })
     }

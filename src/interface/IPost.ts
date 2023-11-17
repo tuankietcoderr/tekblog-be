@@ -11,8 +11,8 @@ export default interface IPost {
     isDraft: boolean
     activeStatus: ActiveStatus
     author: Types.ObjectId | IUser
-    likes: number
-    saved: number
+    likes: Types.ObjectId[] | IUser[]
+    saved: Types.ObjectId[] | IUser[]
     comments: Types.ObjectId[] | IComment[]
     tags: Types.ObjectId[] | ITag[]
     createdAt: Date

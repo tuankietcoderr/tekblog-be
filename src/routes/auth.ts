@@ -20,11 +20,11 @@ router.post(
         "savedPosts",
         "likedPosts"
     ),
-    mustHaveFields<IUser>("username", "password", "name", "email", "major"),
+    mustHaveFields<IUser>("username", "password", "name", "email"),
     async (req: Request, res: Response) => {
-        const { username, password } = req.body
+        const { username, password, email } = req.body
         try {
-            const user = await User.findOne({ username })
+            const user = await User.findOne({ $or: [{ username }, { email }] })
             if (user) return res.status(400).json({ success: false, message: "User already exists" })
 
             const newUser = new User({

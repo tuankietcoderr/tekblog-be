@@ -25,6 +25,7 @@ router.post(
     async (req: Request, res: Response) => {
         try {
             const { tags } = req.body
+            if (tags?.length === 0) return res.status(400).json({ success: false, message: "Tags is required" })
             const tagsFromDB = await Tag.find({ _id: { $in: tags } })
             if (tagsFromDB.length !== tags.length) {
                 return res.status(400).json({ success: false, message: "Tags not found" })
@@ -60,7 +61,8 @@ router.get("/", async (req: Request, res: Response) => {
                     select: "title"
                 }
             ],
-            select: "-activeStatus -__v -content"
+            select: "-activeStatus -__v -content",
+            sort: { likes: -1, createdAt: -1 }
         } as PaginateOptions
 
         await Post.paginate(
@@ -102,9 +104,10 @@ router.get("/hot", async (req: Request, res: Response) => {
 })
 
 // GET USER POSTS
-router.get("/user", verifyToken, async (req: Request, res: Response) => {
+router.get("/user/:user_id", verifyToken, async (req: Request, res: Response) => {
     try {
         const { page, limit } = req.query
+        const { user_id } = req.params
         const options = {
             page: page ?? 1,
             limit: limit ?? 10,
@@ -118,12 +121,14 @@ router.get("/user", verifyToken, async (req: Request, res: Response) => {
                     select: "title"
                 }
             ],
-            select: "-activeStatus -__v -content"
+            select: "-activeStatus -__v -content",
+            sort: { likes: -1, createdAt: -1 }
         } as PaginateOptions
 
         await Post.paginate(
             {
-                isDraft: false
+                isDraft: false,
+                author: user_id || req.user_id
             },
             options,
             (err, result) => {
@@ -206,20 +211,20 @@ router.get("/search", async (req: Request, res: Response) => {
 })
 
 // LIKE/UNLIKE POST
-router.put("/like", verifyToken, async (req: Request, res: Response) => {
+router.put("/:post_id/like", verifyToken, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user_id)
         if (!user) return res.status(404).json({ success: false, message: "User not found" })
-        const post = await Post.findById(req.query.post_id)
+        const post = await Post.findById(req.params.post_id)
         if (!post) return res.status(404).json({ success: false, message: "Post not found" })
         const userLikePosts = user.likedPosts.map((id) => id.toString()) as string[]
         if (userLikePosts.includes(post._id.toString())) {
             await user.updateOne({ $pull: { likedPosts: post._id } })
-            await post.updateOne({ $inc: { likes: -1 } })
+            await post.updateOne({ $pull: { likes: user._id } })
             return res.json({ success: true, message: "Post unliked" })
         } else {
             await user.updateOne({ $push: { likedPosts: post._id } })
-            await post.updateOne({ $inc: { likes: 1 } })
+            await post.updateOne({ $push: { likes: user._id } })
             return res.json({ success: true, message: "Post liked" })
         }
     } catch (error: any) {
@@ -229,21 +234,21 @@ router.put("/like", verifyToken, async (req: Request, res: Response) => {
 })
 
 // SAVE/UNSAVE POST
-router.put("/save", verifyToken, async (req: Request, res: Response) => {
+router.put("/:post_id/save", verifyToken, async (req: Request, res: Response) => {
     try {
         const user = await User.findById(req.user_id)
         if (!user) return res.status(404).json({ success: false, message: "User not found" })
-        const post = await Post.findById(req.query.post_id)
+        const post = await Post.findById(req.params.post_id)
         if (!post) return res.status(404).json({ success: false, message: "Post not found" })
         const userSavePosts = user.savedPosts.map((id) => id.toString()) as string[]
 
         if (userSavePosts.includes(post._id.toString())) {
             await user.updateOne({ $pull: { savedPosts: post._id } })
-            await post.updateOne({ $inc: { saved: -1 } })
+            await post.updateOne({ $pull: { saved: user._id } })
             return res.json({ success: true, message: "Post unsaved" })
         } else {
             await user.updateOne({ $push: { savedPosts: post._id } })
-            await post.updateOne({ $inc: { saved: 1 } })
+            await post.updateOne({ $push: { saved: user._id } })
             return res.json({ success: true, message: "Post saved" })
         }
     } catch (error: any) {
@@ -251,82 +256,13 @@ router.put("/save", verifyToken, async (req: Request, res: Response) => {
     }
 })
 
-// COMMENT POST
-router.post(
-    "/comment",
-    verifyToken,
-    mustHaveFields<IComment>("content", "post"),
-    async (req: Request, res: Response) => {
-        try {
-            const { content, post } = req.body
-            const user = await User.findById(req.user_id)
-            if (!user) return res.status(404).json({ success: false, message: "User not found" })
-            const comment = new Comment({
-                author: user._id,
-                content,
-                post
-            })
-            await comment.save()
-            await Post.findByIdAndUpdate(post, { $push: { comments: comment._id } })
-            res.json({ success: true, message: "Comment created", data: comment })
-        } catch (error: any) {
-            res.status(500).json({ message: error.message })
-        }
-    }
-)
-
-router.get("/comment", async (req: Request, res: Response) => {
-    try {
-        const { page, limit, post_id } = req.query
-        console.log({ post_id })
-        const options = {
-            page: page ?? 1,
-            limit: limit ?? 10,
-            populate: [
-                {
-                    path: "author",
-                    select: "username name avatar"
-                }
-            ],
-            select: "-__v"
-        } as PaginateOptions
-
-        await Comment.paginate(
-            {
-                post: post_id
-            },
-            options,
-            (err, result) => {
-                if (err) return res.status(500).json({ success: false, message: err.message })
-                const { docs, ...data } = result
-                return res.json({ success: true, message: "Comments", data: docs, ...data })
-            }
-        )
-    } catch (error: any) {
-        res.status(500).json({ message: error.message })
-    }
-})
-
-// DELETE COMMENT
-router.delete("/comment/:id", verifyToken, async (req: Request, res: Response) => {
-    try {
-        const comment = await Comment.findById(req.params.id)
-        if (!comment) return res.status(404).json({ success: false, message: "Comment not found" })
-        if (comment.author.toString() !== req.user_id) {
-            return res.status(403).json({ success: false, message: "You are not the author of this comment" })
-        }
-        await comment.deleteOne()
-        await Post.findByIdAndUpdate(comment.post, { $pull: { comments: comment._id } })
-        res.json({ success: true, message: "Comment deleted" })
-    } catch (error: any) {
-        res.status(500).json({ message: error.message })
-    }
-})
-
 // GET POSTS BY TAG
-router.get("/tag", async (req: Request, res: Response) => {
+router.get("/tag/:tag_id", async (req: Request, res: Response) => {
     try {
-        const { page, limit, tag_id } = req.query
+        const { page, limit } = req.query
+        const { tag_id } = req.params
+        const tag = await Tag.findById(tag_id)
+        if (!tag) return res.status(404).json({ success: false, message: "Tag not found" })
         const options = {
             page: page ?? 1,
             limit: limit ?? 10,
@@ -356,21 +292,43 @@ router.get("/tag", async (req: Request, res: Response) => {
     }
 })
 
+// RELATED POSTS
+router.get("/:post_id/related", async (req: Request, res: Response) => {
+    try {
+        const { post_id } = req.params
+        const post = await Post.findById(post_id)
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" })
+        const relatedPosts = await Post.find(
+            {
+                isDraft: false,
+                tags: { $in: post.tags }
+            },
+            {
+                title: 1,
+                author: 1,
+                createdAt: 1
+            },
+            {
+                populate: {
+                    path: "author",
+                    select: "name avatar"
+                }
+            }
+        )
+        return res.json({ success: true, message: "Related posts", data: relatedPosts })
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+})
+
 // GET POST BY ID
 router.get("/:id", async (req: Request, res: Response) => {
     try {
         const post = await Post.findById(req.params.id)
-            .populate("author", "username name avatar")
+            .populate("author", "username name avatar bio major createdAt")
             .populate("tags", "title")
-            .populate({
-                path: "comments",
-                populate: {
-                    path: "author",
-                    select: "name username -_id"
-                },
-                select: "-post -__v -updatedAt"
-            })
             .select("-activeStatus -__v")
+
         if (!post) return res.status(404).json({ success: false, message: "Post not found" })
         await Tag.updateMany({ _id: { $in: post.tags } }, { $inc: { score: 1 } })
         res.json({ success: true, message: "Post", data: post })
