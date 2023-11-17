@@ -51,7 +51,13 @@ router.get("/some", async (req, res) => {
                             $project: {
                                 _id: 1,
                                 title: 1,
-                                comments: 1
+                                comments: 1,
+                                isDraft: 1
+                            }
+                        },
+                        {
+                            $match: {
+                                isDraft: false
                             }
                         }
                     ]
