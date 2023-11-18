@@ -36,8 +36,14 @@ router.post(
                 author
             })
             await post.save()
-
-            res.json({ success: true, message: "Post created", data: post })
+            const postPopulated = await (
+                await post.populate("author", "avatar name username")
+            ).populate("tags", "title")
+            res.json({
+                success: true,
+                message: "Post created",
+                data: postPopulated
+            })
         } catch (error: any) {
             res.status(500).json({ message: error.message })
         }
@@ -142,74 +148,6 @@ router.get("/user/:user_id", verifyToken, async (req: Request, res: Response) =>
     }
 })
 
-// SEARCH POSTS
-router.get("/search", async (req: Request, res: Response) => {
-    try {
-        const { type, q, limit, page } = req.query
-        const regex = { $regex: q as string, $options: "i" }
-        let data = [] as (ITag | IUser | IPost)[]
-        let rest = {}
-        const options: PaginateOptions = {
-            limit: Number(limit) || 10,
-            page: Number(page) || 1
-        }
-        switch (type) {
-            case "tag":
-                await Tag.paginate(
-                    { title: regex },
-                    {
-                        ...options,
-                        sort: { score: -1 }
-                    },
-                    (err, result) => {
-                        if (err) return res.status(500).json({ success: false, message: err.message })
-                        const { docs, ...restData } = result
-                        data = docs
-                        rest = restData
-                    }
-                )
-                break
-            case "user":
-                await User.paginate(
-                    {
-                        $or: [
-                            {
-                                username: regex
-                            },
-                            {
-                                name: regex
-                            }
-                        ],
-                        role: EUserRole.GUEST
-                    },
-                    {
-                        ...options
-                    },
-                    (err, result) => {
-                        if (err) return res.status(500).json({ success: false, message: err.message })
-                        const { docs, ...restData } = result
-                        data = docs
-                        rest = restData
-                    }
-                )
-                break
-            case "post":
-                await Post.paginate({ title: regex, isDraft: false }, { ...options }, (err, result) => {
-                    if (err) return res.status(500).json({ success: false, message: err.message })
-                    const { docs, ...restData } = result
-                    data = docs
-                    rest = restData
-                })
-                break
-            default:
-                return res.status(400).json({ success: false, message: "Invalid type" })
-        }
-        res.json({ success: true, message: "Search result", data, ...rest })
-    } catch (error: any) {
-        res.status(500).json({ message: error.message })
-    }
-})
-
 // LIKE/UNLIKE POST
 router.put("/:post_id/like", verifyToken, async (req: Request, res: Response) => {
     try {
@@ -270,6 +208,10 @@ router.get("/tag/:tag_id", async (req: Request, res: Response) => {
                 {
                     path: "author",
                     select: "username name avatar"
+                },
+                {
+                    path: "tags",
+                    select: "title"
                 }
             ],
             select: "-activeStatus -__v -content"

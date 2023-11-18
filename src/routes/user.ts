@@ -156,9 +156,9 @@ router.put(
 )
 
 // FOLLOW/UNFOLLOW USER
-router.put("/follow", verifyToken, async (req: Request, res: Response) => {
+router.put("/:user_id/follow", verifyToken, async (req: Request, res: Response) => {
     try {
-        const userToFollowId = req.query.user_id as string
+        const userToFollowId = req.params.user_id as string
         if (userToFollowId === req.user_id) {
             return res.status(400).json({ success: false, message: "You can not follow yourself" })
         }
