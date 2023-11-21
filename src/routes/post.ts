@@ -110,10 +110,14 @@ router.get("/hot", async (req: Request, res: Response) => {
 })
 
 // GET USER POSTS
-router.get("/user/:user_id", verifyToken, async (req: Request, res: Response) => {
+router.get("/user", async (req: Request, res: Response) => {
     try {
-        const { page, limit } = req.query
-        const { user_id } = req.params
+        const { page, limit, user_id, isDraft } = req.query
+        const userId = user_id
+        if (!userId) {
+            return res.status(400).json({ message: "No userId provided", success: false })
+        }
+
         const options = {
             page: page ?? 1,
             limit: limit ?? 10,
@@ -130,11 +134,10 @@ router.get("/user/:user_id", verifyToken, async (req: Request, res: Response) =>
             select: "-activeStatus -__v -content",
             sort: { likes: -1, createdAt: -1 }
         } as PaginateOptions
-
         await Post.paginate(
             {
-                isDraft: false,
-                author: user_id || req.user_id
+                isDraft: JSON.parse(isDraft as string) || false,
+                author: userId
             },
             options,
             (err, result) => {
@@ -144,7 +147,7 @@ router.get("/user/:user_id", verifyToken, async (req: Request, res: Response) =>
             }
         )
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ message: error.message, error })
     }
 })
 
@@ -234,6 +237,44 @@ router.get("/tag/:tag_id", async (req: Request, res: Response) => {
     }
 })
 
+// ARCHIVED POSTS
+router.get("/archived", verifyToken, async (req: Request, res: Response) => {
+    try {
+        const { page, limit, type } = req.query
+        const options = {
+            page: page ?? 1,
+            limit: limit ?? 10,
+            populate: [
+                {
+                    path: "author",
+                    select: "username name avatar"
+                },
+                {
+                    path: "tags",
+                    select: "title"
+                }
+            ],
+            select: "-activeStatus -__v -content",
+            sort: { createdAt: -1 }
+        } as PaginateOptions
+
+        await Post.paginate(
+            {
+                isDraft: false,
+                [type?.toString() ?? "saved"]: { $in: [req.user_id] }
+            },
+            options,
+            (err, result) => {
+                if (err) return res.status(500).json({ success: false, message: err.message })
+                const { docs, ...data } = result
+                return res.json({ success: true, message: "Posts", data: docs, ...data })
+            }
+        )
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+})
+
 // RELATED POSTS
 router.get("/:post_id/related", async (req: Request, res: Response) => {
     try {
@@ -286,18 +327,32 @@ router.put(
     doNotAllowFields<IPost>("activeStatus", "author", "comments", "createdAt", "likes"),
     async (req: Request, res: Response) => {
         try {
-            const post = await Post.findById(req.params.id)
+            const post = await Post.findByIdAndUpdate(
+                req.params.id,
+                {
+                    $set: req.body
+                },
+                {
+                    new: true,
+                    runValidators: true,
+                    populate: [
+                        {
+                            path: "author",
+                            select: "username avatar name"
+                        },
+                        {
+                            path: "tags",
+                            select: "title"
+                        }
+                    ]
+                }
+            )
             if (!post) return res.status(404).json({ success: false, message: "Post not found" })
-            if (post.author.toString() !== req.user_id) {
-                return res.status(403).json({ success: false, message: "You are not the author of this post" })
-            }
-            const { tags } = req.body
-            const tagsFromDB = await Tag.find({ _id: { $in: tags } })
-            if (tagsFromDB.length !== tags.length) {
-                return res.status(400).json({ success: false, message: "Tags not found" })
-            }
-            const newPost = await post.updateOne(req.body, { new: true })
-            res.json({ success: true, message: "Post updated", data: newPost })
+            res.json({
+                success: true,
+                message: "Post updated",
+                data: post
+            })
         } catch (error: any) {
             res.status(500).json({ message: error.message })
         }

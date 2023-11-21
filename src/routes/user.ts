@@ -189,17 +189,62 @@ router.put("/:user_id/follow", verifyToken, async (req: Request, res: Response) 
 })
 
 // GET FOLLOW
-router.get("/follow", async (req: Request, res: Response) => {
+router.get("/:user_id/follow", async (req: Request, res: Response) => {
     try {
-        const { user_id, t } = req.query
+        const { t } = req.query
+        const { user_id } = req.params
         if (!user_id) return res.status(400).json({ success: false, message: "Missing user_id" })
+        const user = await User.findById(user_id.toString())
+        if (!user) return res.status(400).json({ success: false, message: "User not found" })
         if (!t) return res.status(400).json({ success: false, message: "Missing t" })
         if (t !== "followers" && t !== "following")
             return res.status(400).json({ success: false, message: "t must be followers or following" })
-        const data = await User.findById(new toId(user_id.toString())).populate(t as string, "username name avatar")
-        res.json({ success: true, data: t === "followers" ? data?.followers : data?.following })
+        const data = await user.populate(t as string, "username name avatar bio major followers following")
+        res.json({ success: true, data: t === "followers" ? data?.followers : data?.following || [] })
     } catch (error: any) {
         return res.status(500).json({ success: false, message: error.message })
+    }
+})
+
+// GET BY ID
+router.get("/:user_id", async (req: Request, res: Response) => {
+    try {
+        const user = await User.findById(new toId(req.params.user_id))
+            .select("-password")
+            .populate("followers", "username name avatar")
+            .populate("following", "username name avatar")
+            .populate({
+                path: "savedPosts",
+                select: "-content -activeStatus -__v -isDraft",
+                populate: [
+                    {
+                        path: "author",
+                        select: "username name avatar"
+                    },
+                    {
+                        path: "tags",
+                        select: "title"
+                    }
+                ]
+            })
+            .populate({
+                path: "likedPosts",
+                select: "-content -activeStatus -__v -isDraft",
+                populate: [
+                    {
+                        path: "author",
+                        select: "username name avatar"
+                    },
+                    {
+                        path: "tags",
+                        select: "title"
+                    }
+                ]
+            })
+        if (!user) return res.status(400).json({ success: false, message: "User not found" })
+        res.json({ success: true, data: user })
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
