@@ -10,6 +10,7 @@ declare global {
             SMTP_PASSWORD: string
             URL: string
             ALLOWED_ORIGIN: string
+            SECRET_ADMIN_KEY: string
         }
     }
 }

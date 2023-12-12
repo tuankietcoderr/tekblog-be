@@ -8,10 +8,49 @@ import ActiveStatus from "../common/active-status"
 import Post from "../schema/Post"
 import { sendMail } from "../service/mailer"
 import mustHaveFields from "../middleware/must-have-field"
-import IUser from "../interface/IUser"
+import IUser, { EUserRole } from "../interface/IUser"
+import bcrypt from "bcryptjs"
+import Credential from "../schema/Credential"
+import jwt from "jsonwebtoken"
 
 const router = Router()
 const toId = Types.ObjectId
+
+router.post("/account", mustHaveFields("secret_key", "username", "email", "password", "name"), async (req, res) => {
+    const { secret_key, username, email, password, name } = req.body
+    try {
+        if (secret_key !== process.env.SECRET_ADMIN_KEY)
+            return res.status(400).json({ success: false, message: "Invalid secret key" })
+        const user = await User.findOne({ $or: [{ username }, { email }] })
+        if (user) return res.status(400).json({ success: false, message: "User already exists" })
+
+        const newUser = new User({
+            username,
+            email,
+            name,
+            role: EUserRole.ADMIN
+        })
+        await newUser.save()
+        const bcryptPassword = await bcrypt.hash(password, 10)
+        const newCredential = new Credential({
+            user_id: newUser._id,
+            password: bcryptPassword
+        })
+        await newCredential.save()
+
+        const accessToken = jwt.sign({ user_id: newUser._id.toString() }, process.env.JWT_SECRET!, {
+            expiresIn: "1d"
+        })
+        res.json({
+            success: true,
+            message: "Admin created",
+            accessToken,
+            data: newUser
+        })
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message })
+    }
+})
 
 router.get("/report", verifyAdmin, async (req: Request, res: Response) => {
     try {
