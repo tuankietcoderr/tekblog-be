@@ -1,13 +1,12 @@
+import bcrypt from "bcryptjs"
 import express, { Request, Response } from "express"
 import { Types } from "mongoose"
-import User from "../schema/User"
-import verifyToken from "../middleware/auth"
-import doNotAllowFields from "../middleware/not-allow-field"
 import IUser from "../interface/IUser"
-import bcrypt from "bcryptjs"
-import Credential from "../schema/Credential"
-import { sendMail } from "../service/mailer"
+import verifyToken from "../middleware/auth"
 import mustHaveFields from "../middleware/must-have-field"
+import doNotAllowFields from "../middleware/not-allow-field"
+import Credential from "../schema/Credential"
+import User from "../schema/User"
 
 const router = express.Router()
 const toId = Types.ObjectId
@@ -78,47 +77,6 @@ router.put(
         }
     }
 )
-
-// FORGET PASSWORD
-router.get("/forget-password", async (req, res) => {
-    try {
-        const { email } = req.query
-
-        const user = await User.findOne({ email })
-        if (!user) {
-            return res.status(400).json({ success: false, message: "User does not exist" })
-        }
-
-        if (!user.isEmailVerified) {
-            return res.status(400).json({ success: false, message: "Email chưa được xác thực" })
-        }
-
-        const credential = await Credential.findOne({ user_id: user._id })
-        if (!credential) {
-            return res.status(400).json({ success: false, message: "User does not exist" })
-        }
-        const randomPassword = Math.random().toString(36).slice(-8)
-
-        const hashedPassword = await bcrypt.hash(randomPassword, 10)
-        credential.password = hashedPassword
-
-        await credential.save()
-
-        sendMail({
-            to: email as string,
-            subject: "Reset password for TekBlog account",
-            html: `Dear ${user.name},<br/>This is your reset password: <b>${randomPassword}</b>. Use this password to login and change it as you want in the profile!<br/>Regards,<br/>TekBlog Team`
-        })
-            .then(() => {
-                return res.status(200).json({ success: true, message: "Email sent" })
-            })
-            .catch((err: any) => {
-                return res.status(500).json({ success: false, message: err.message })
-            })
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Server error" })
-    }
-})
 
 // CHANGE PASSWORD
 router.put(
