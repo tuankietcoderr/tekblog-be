@@ -35,6 +35,7 @@ router.get("/email", async (req: Request, res: Response) => {
     try {
         const { email, token } = req.query
         const isMatch = await bcrypt.compare(email as string, token as string)
+        console.log(req.query)
         if (!isMatch) {
             return res.status(400).json({
                 success: false,
