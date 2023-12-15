@@ -14,38 +14,8 @@ const toId = Types.ObjectId
 // GET CURRENT USER
 router.get("/", verifyToken, async (req: Request, res: Response) => {
     try {
-        const user = await User.findById(new toId(req.user_id))
-            .select("-password")
-            .populate("followers", "username name avatar")
-            .populate("following", "username name avatar")
-            .populate({
-                path: "savedPosts",
-                select: "-content -activeStatus -__v -isDraft",
-                populate: [
-                    {
-                        path: "author",
-                        select: "username name avatar"
-                    },
-                    {
-                        path: "tags",
-                        select: "title"
-                    }
-                ]
-            })
-            .populate({
-                path: "likedPosts",
-                select: "-content -activeStatus -__v -isDraft",
-                populate: [
-                    {
-                        path: "author",
-                        select: "username name avatar"
-                    },
-                    {
-                        path: "tags",
-                        select: "title"
-                    }
-                ]
-            })
+        const user = await User.findById(new toId(req.user_id)).select("-password")
+
         if (!user) return res.status(400).json({ success: false, message: "User not found" })
         res.json({ success: true, data: user })
     } catch (error: any) {
@@ -57,7 +27,7 @@ router.get("/", verifyToken, async (req: Request, res: Response) => {
 router.put(
     "/",
     verifyToken,
-    doNotAllowFields<IUser>("role", "activeStatus", "followers", "following", "likedPosts", "savedPosts"),
+    doNotAllowFields<IUser>("role", "activeStatus", "followers", "following"),
     async (req: Request, res: Response) => {
         try {
             const user = await User.findById(new toId(req.user_id))
@@ -158,7 +128,7 @@ router.get("/:user_id/follow", async (req: Request, res: Response) => {
         if (t !== "followers" && t !== "following")
             return res.status(400).json({ success: false, message: "t must be followers or following" })
         const data = await user.populate(t as string, "username name avatar bio major followers following")
-        res.json({ success: true, data: t === "followers" ? data?.followers : data?.following || [] })
+        res.json({ success: true, data: (t === "followers" ? data?.followers : data?.following) || [] })
     } catch (error: any) {
         return res.status(500).json({ success: false, message: error.message })
     }
@@ -167,38 +137,8 @@ router.get("/:user_id/follow", async (req: Request, res: Response) => {
 // GET BY ID
 router.get("/:user_id", async (req: Request, res: Response) => {
     try {
-        const user = await User.findById(new toId(req.params.user_id))
-            .select("-password")
-            .populate("followers", "username name avatar")
-            .populate("following", "username name avatar")
-            .populate({
-                path: "savedPosts",
-                select: "-content -activeStatus -__v -isDraft",
-                populate: [
-                    {
-                        path: "author",
-                        select: "username name avatar"
-                    },
-                    {
-                        path: "tags",
-                        select: "title"
-                    }
-                ]
-            })
-            .populate({
-                path: "likedPosts",
-                select: "-content -activeStatus -__v -isDraft",
-                populate: [
-                    {
-                        path: "author",
-                        select: "username name avatar"
-                    },
-                    {
-                        path: "tags",
-                        select: "title"
-                    }
-                ]
-            })
+        const user = await User.findById(new toId(req.params.user_id)).select("-password")
+
         if (!user) return res.status(400).json({ success: false, message: "User not found" })
         res.json({ success: true, data: user })
     } catch (error: any) {

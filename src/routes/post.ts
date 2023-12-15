@@ -186,11 +186,23 @@ router.put("/:post_id/save", verifyToken, async (req: Request, res: Response) =>
         if (userSavePosts.includes(post._id.toString())) {
             await user.updateOne({ $pull: { savedPosts: post._id } })
             await post.updateOne({ $pull: { saved: user._id } })
-            return res.json({ success: true, message: "Post unsaved" })
+            return res.json({
+                success: true,
+                message: "Post unsaved",
+                data: {
+                    save: false
+                }
+            })
         } else {
             await user.updateOne({ $push: { savedPosts: post._id } })
             await post.updateOne({ $push: { saved: user._id } })
-            return res.json({ success: true, message: "Post saved" })
+            return res.json({
+                success: true,
+                message: "Post saved",
+                data: {
+                    save: true
+                }
+            })
         }
     } catch (error: any) {
         res.status(500).json({ message: error.message })

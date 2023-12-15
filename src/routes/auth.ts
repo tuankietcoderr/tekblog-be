@@ -12,15 +12,7 @@ const router = express.Router()
 
 router.post(
     "/signup",
-    doNotAllowFields<IUser>(
-        "activeStatus",
-        "followers",
-        "following",
-        "isEmailVerified",
-        "role",
-        "savedPosts",
-        "likedPosts"
-    ),
+    doNotAllowFields<IUser>("activeStatus", "followers", "following", "isEmailVerified", "role"),
     mustHaveFields<IUser>("username", "password", "name", "email"),
     async (req: Request, res: Response) => {
         const { username, password, email } = req.body
