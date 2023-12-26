@@ -16,7 +16,7 @@ router.post("/", verifyToken, mustHaveFields<ITag>("title"), async (req, res) =>
         await tag.save()
         res.status(201).json({ success: true, message: "Tag created", data: tag })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
         const tags = await Tag.find({}).sort({ score: -1 })
         res.json({ success: true, message: "All tags", data: tags })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -72,7 +72,7 @@ router.get("/some", async (req, res) => {
         ])
         res.json({ success: true, message: "Some tags", data: tags })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 

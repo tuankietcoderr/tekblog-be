@@ -18,7 +18,7 @@ router.post(
         const { username, password, email } = req.body
         try {
             const user = await User.findOne({ $or: [{ username }, { email }] })
-            if (user) return res.status(400).json({ success: false, message: "User already exists" })
+            if (user) return res.status(400).json({ success: false, message: "Fail to create user" })
 
             const newUser = new User({
                 ...req.body
@@ -49,7 +49,11 @@ router.post(
 router.post("/signin", mustHaveFields("usernameOrEmail", "password"), async (req, res) => {
     const { usernameOrEmail, password } = req.body
     try {
-        const user = await User.findOne({ $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }] })
+        const user = await User.findOne(
+            { $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }] },
+            {},
+            { runValidators: true }
+        )
         if (!user) return res.status(400).json({ success: false, message: "User does not exist" })
 
         const credential = await Credential.findOne({

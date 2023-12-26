@@ -39,13 +39,13 @@ router.post(
             const postPopulated = await (
                 await post.populate("author", "avatar name username")
             ).populate("tags", "title")
-            res.json({
+            res.status(201).json({
                 success: true,
                 message: "Post created",
                 data: postPopulated
             })
         } catch (error: any) {
-            res.status(500).json({ message: error.message })
+            res.status(500).json({ success: false, message: error.message })
         }
     }
 )
@@ -83,7 +83,7 @@ router.get("/", async (req: Request, res: Response) => {
             }
         )
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -105,7 +105,7 @@ router.get("/hot", async (req: Request, res: Response) => {
             .select("-activeStatus -__v -content")
         res.json({ success: true, message: "Posts", data: posts })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -170,7 +170,7 @@ router.put("/:post_id/like", verifyToken, async (req: Request, res: Response) =>
         }
     } catch (error: any) {
         console.log({ error })
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -205,7 +205,7 @@ router.put("/:post_id/save", verifyToken, async (req: Request, res: Response) =>
             })
         }
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -245,7 +245,7 @@ router.get("/tag/:tag_id", async (req: Request, res: Response) => {
             }
         )
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -283,7 +283,7 @@ router.get("/archived", verifyToken, async (req: Request, res: Response) => {
             }
         )
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -312,7 +312,7 @@ router.get("/:post_id/related", async (req: Request, res: Response) => {
         )
         return res.json({ success: true, message: "Related posts", data: relatedPosts })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -328,7 +328,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         await Tag.updateMany({ _id: { $in: post.tags } }, { $inc: { score: 1 } })
         res.json({ success: true, message: "Post", data: post })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -366,7 +366,7 @@ router.put(
                 data: post
             })
         } catch (error: any) {
-            res.status(500).json({ message: error.message })
+            res.status(500).json({ success: false, message: error.message })
         }
     }
 )
@@ -384,7 +384,7 @@ router.delete("/:id", verifyToken, async (req: Request, res: Response) => {
         await Comment.deleteMany({ post: post._id })
         res.json({ success: true, message: "Post deleted" })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 

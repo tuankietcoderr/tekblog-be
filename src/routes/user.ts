@@ -39,7 +39,8 @@ router.put(
                 ...req.body
             }
             await user.updateOne(update, {
-                new: true
+                new: true,
+                runValidators: true
             })
             res.json({ success: true, message: "User updated", data: update })
         } catch (err: any) {

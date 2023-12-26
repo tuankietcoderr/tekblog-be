@@ -10,7 +10,7 @@ const UserSchema = new Schema<IUser>(
             type: String,
             unique: true,
             required: [true, "Username is required"],
-            minlength: [5, "Username must be at least 5 characters long"],
+            minlength: [6, "Username must be at least 6 characters long"],
             maxlength: [20, "Username must be at most 20 characters long"],
             match: [/^[a-zA-Z0-9]+$/, "Username must contain only letters and numbers"]
         },
@@ -22,7 +22,8 @@ const UserSchema = new Schema<IUser>(
         email: {
             type: String,
             unique: true,
-            required: [true, "Email is required"]
+            required: [true, "Email is required"],
+            match: [/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/, "Email is invalid"]
         },
         avatar: {
             type: String,

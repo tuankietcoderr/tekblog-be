@@ -3,6 +3,7 @@ declare global {
     namespace NodeJS {
         interface ProcessEnv {
             MONGODB_URI: string
+            MONGODB_URI_TEST: string
             PORT: number
             JWT_SECRET: string
             SMTP_USER: string

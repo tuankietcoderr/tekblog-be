@@ -23,9 +23,9 @@ router.post("/post/:postId", verifyToken, mustHaveFields<IComment>("content"), a
         })
         await comment.save()
         await Post.findByIdAndUpdate(post, { $push: { comments: comment._id } })
-        res.json({ success: true, message: "Comment created", data: comment })
+        res.status(201).json({ success: true, message: "Comment created", data: comment })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -58,7 +58,23 @@ router.get("/post/:postId", async (req: Request, res: Response) => {
             }
         )
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
+    }
+})
+
+// EDIT COMMENT
+router.put("/:id", verifyToken, mustHaveFields<IComment>("content"), async (req: Request, res: Response) => {
+    try {
+        const { content } = req.body
+        const comment = await Comment.findById(req.params.id)
+        if (!comment) return res.status(404).json({ success: false, message: "Comment not found" })
+        if (comment.author.toString() !== req.user_id) {
+            return res.status(403).json({ success: false, message: "You are not the author of this comment" })
+        }
+        await comment.updateOne({ content }, { new: true, runValidators: true })
+        res.json({ success: true, message: "Comment updated", data: comment })
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
@@ -74,7 +90,7 @@ router.delete("/:id", verifyToken, async (req: Request, res: Response) => {
         await Post.findByIdAndUpdate(comment.post, { $pull: { comments: comment._id } })
         res.json({ success: true, message: "Comment deleted" })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 

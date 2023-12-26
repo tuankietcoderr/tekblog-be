@@ -92,7 +92,7 @@ router.get("/", async (req: Request, res: Response) => {
         }
         res.json({ success: true, message: "Search result", data, ...rest })
     } catch (error: any) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ success: false, message: error.message })
     }
 })
 
