@@ -20,7 +20,7 @@ const toId = Types.ObjectId
 router.post(
     "/",
     verifyToken,
-    doNotAllowFields<IPost>("activeStatus", "author", "comments", "likes"),
+    doNotAllowFields<IPost>("activeStatus", "author", "commentsCount", "likes"),
     mustHaveFields<IPost>("content", "tags", "title"),
     async (req: Request, res: Response) => {
         try {
@@ -99,7 +99,7 @@ router.get("/hot", async (req: Request, res: Response) => {
                 limit: 1
             }
         )
-            .sort({ likes: -1, comments: -1, createdAt: -1 })
+            .sort({ likes: -1, commentsCount: -1, createdAt: -1 })
             .populate("author", "username name")
             .populate("tags", "title")
             .select("-activeStatus -__v -content")
@@ -336,7 +336,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 router.put(
     "/:id",
     verifyToken,
-    doNotAllowFields<IPost>("activeStatus", "author", "comments", "createdAt", "likes"),
+    doNotAllowFields<IPost>("activeStatus", "author", "commentsCount", "createdAt", "likes"),
     async (req: Request, res: Response) => {
         try {
             const post = await Post.findByIdAndUpdate(

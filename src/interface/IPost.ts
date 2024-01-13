@@ -13,7 +13,7 @@ export default interface IPost {
     author: Types.ObjectId | IUser
     likes: Types.ObjectId[] | IUser[]
     saved: Types.ObjectId[] | IUser[]
-    comments: Types.ObjectId[] | IComment[]
+    commentsCount: number
     tags: Types.ObjectId[] | ITag[]
     createdAt: Date
     updatedAt: Date

@@ -12,17 +12,25 @@ const router = Router()
 // COMMENT POST
 router.post("/post/:postId", verifyToken, mustHaveFields<IComment>("content"), async (req: Request, res: Response) => {
     try {
-        const { content, post } = req.body
+        const { content } = req.body
         const { postId } = req.params
+        const post = await Post.findById(postId)
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" })
         const user = await User.findById(req.user_id)
         if (!user) return res.status(404).json({ success: false, message: "User not found" })
         const comment = new Comment({
             author: user._id,
             content,
-            post: postId
+            post: postId,
+            ...req.body
         })
+        if (req.body.parent) {
+            const parent = await Comment.findById(req.body.parent)
+            if (!parent) return res.status(404).json({ success: false, message: "Parent comment not found" })
+            await parent.updateOne({ $push: { children: comment._id } })
+        }
         await comment.save()
-        await Post.findByIdAndUpdate(post, { $push: { comments: comment._id } })
+        await post.updateOne({ $inc: { commentsCount: 1 } })
         res.status(201).json({ success: true, message: "Comment created", data: comment })
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message })
@@ -36,19 +44,14 @@ router.get("/post/:postId", async (req: Request, res: Response) => {
         const options = {
             page: page ?? 1,
             limit: limit ?? 10,
-            populate: [
-                {
-                    path: "author",
-                    select: "username name avatar"
-                }
-            ],
             select: "-__v",
             sort: { createdAt: -1 }
         } as PaginateOptions
 
         await Comment.paginate(
             {
-                post: postId
+                post: postId,
+                parent: null
             },
             options,
             (err, result) => {
@@ -87,8 +90,21 @@ router.delete("/:id", verifyToken, async (req: Request, res: Response) => {
             return res.status(403).json({ success: false, message: "You are not the author of this comment" })
         }
         await comment.deleteOne()
-        await Post.findByIdAndUpdate(comment.post, { $pull: { comments: comment._id } })
+        await Post.findByIdAndUpdate(comment.post, { $inc: { commentsCount: -1 } })
         res.json({ success: true, message: "Comment deleted" })
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message })
+    }
+})
+
+router.put("/:id/like", verifyToken, async (req: Request, res: Response) => {
+    try {
+        const comment = await Comment.findByIdAndUpdate(req.params.id)
+        if (!comment) return res.status(404).json({ success: false, message: "Comment not found" })
+        comment.likesCount = comment.isLikedByMe ? comment.likesCount - 1 : comment.likesCount + 1
+        comment.isLikedByMe = !comment.isLikedByMe
+        await comment.save()
+        return res.json({ success: true, message: "Comment updated", data: comment })
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message })
     }

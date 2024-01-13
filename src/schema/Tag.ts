@@ -8,7 +8,8 @@ const TagSchema = new Schema<ITag>({
         type: String,
         required: [true, "Title is required"],
         minlength: [3, "Title must be at least 3 characters long"],
-        maxlength: [20, "Title must be at most 20 characters long"]
+        maxlength: [20, "Title must be at most 20 characters long"],
+        unique: true
     },
     score: {
         type: Number,

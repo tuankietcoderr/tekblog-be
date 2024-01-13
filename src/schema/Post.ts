@@ -36,12 +36,10 @@ const PostSchema = new Schema<IPost>(
             type: Boolean,
             default: false
         },
-        comments: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: SCHEMA.COMMENTS
-            }
-        ],
+        commentsCount: {
+            type: Number,
+            default: 0
+        },
         tags: [
             {
                 type: Schema.Types.ObjectId,
