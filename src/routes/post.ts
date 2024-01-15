@@ -12,6 +12,7 @@ import Comment from "../schema/Comment"
 import IComment from "../interface/IComment"
 import ITag from "../interface/ITag"
 import IUser, { EUserRole } from "../interface/IUser"
+import { sendMail } from "../service/mailer"
 
 const router = Router()
 const toId = Types.ObjectId
@@ -31,6 +32,8 @@ router.post(
                 return res.status(400).json({ success: false, message: "Tags not found" })
             }
             const author = new toId(req.user_id)
+            const user = await User.findById(author)
+            if (!user) return res.status(404).json({ success: false, message: "User not found" })
             const post = new Post({
                 ...req.body,
                 author
@@ -39,6 +42,24 @@ router.post(
             const postPopulated = await (
                 await post.populate("author", "avatar name username")
             ).populate("tags", "title")
+            for (const follower of user.followers) {
+                const _follower = await User.findById(follower)
+                if (!_follower) continue
+                const email = _follower.email
+                sendMail({
+                    to: email,
+                    subject: "[TekBlog] New post from your following",
+                    html: `<p>Hi ${_follower.name},\n\n${user.name} has just posted a new post.</p>
+                    <img src="${
+                        post.thumbnail
+                    }" alt="thumbnail" style="width: 400px; height: 200px; object-fit: cover; border: 1px solid black;" />
+                    <p>Check it out at ${
+                        process.env.NODE_ENV === "development"
+                            ? process.env.ALLOWED_ORIGIN.split(",")[0]
+                            : process.env.ALLOWED_ORIGIN.split(",")[1]
+                    }/${post._id}</p><br />TekBlog Team`
+                })
+            }
             res.status(201).json({
                 success: true,
                 message: "Post created",
